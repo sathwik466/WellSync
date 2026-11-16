@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Environment
+.env
+.env.local
+
+# Build
+frontend/build/
+frontend/dist/
+*.egg-info/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# FAISS index
+backend/data/faiss_index/
+backend/data/*.index
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# MySQL
+*.sql.bak

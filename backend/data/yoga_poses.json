@@ -1,0 +1,83 @@
+[
+  {
+    "id": "warrior_ii",
+    "name": "Warrior II (Virabhadrasana II)",
+    "description": "A standing pose that builds strength and stability.",
+    "keypoints": ["left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_hip", "right_hip", "left_knee", "right_knee"],
+    "angles": {
+      "front_knee": {"joint": ["hip", "knee", "ankle"], "target": 90, "tolerance": 15},
+      "back_leg": {"joint": ["hip", "knee", "ankle"], "target": 170, "tolerance": 10},
+      "arms": {"joint": ["shoulder", "elbow", "wrist"], "target": 180, "tolerance": 15}
+    },
+    "instructions": [
+      "Step feet wide apart, front foot forward",
+      "Bend front knee to 90 degrees",
+      "Extend arms parallel to the floor",
+      "Keep back leg straight and strong"
+    ]
+  },
+  {
+    "id": "tree_pose",
+    "name": "Tree Pose (Vrikshasana)",
+    "description": "A balancing pose that improves focus and stability.",
+    "keypoints": ["left_shoulder", "right_shoulder", "left_hip", "right_hip", "left_knee", "right_knee"],
+    "angles": {
+      "standing_leg": {"joint": ["hip", "knee", "ankle"], "target": 180, "tolerance": 10},
+      "lifted_knee": {"joint": ["hip", "knee", "ankle"], "target": 45, "tolerance": 20}
+    },
+    "instructions": [
+      "Stand on one leg",
+      "Place foot on inner thigh or calf (not knee)",
+      "Bring hands to prayer position",
+      "Fix gaze on a steady point"
+    ]
+  },
+  {
+    "id": "downward_dog",
+    "name": "Downward Dog (Adho Mukha Svanasana)",
+    "description": "An inverted V-shape pose that stretches the whole body.",
+    "keypoints": ["left_shoulder", "right_shoulder", "left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle"],
+    "angles": {
+      "spine": {"joint": ["shoulder", "hip", "ankle"], "target": 90, "tolerance": 20},
+      "legs": {"joint": ["hip", "knee", "ankle"], "target": 170, "tolerance": 15}
+    },
+    "instructions": [
+      "Start on hands and knees",
+      "Lift hips up and back",
+      "Straighten legs without locking knees",
+      "Press palms firmly into the mat"
+    ]
+  },
+  {
+    "id": "chair_pose",
+    "name": "Chair Pose (Utkatasana)",
+    "description": "A strengthening pose for legs and core.",
+    "keypoints": ["left_shoulder", "right_shoulder", "left_hip", "right_hip", "left_knee", "right_knee"],
+    "angles": {
+      "knees": {"joint": ["hip", "knee", "ankle"], "target": 90, "tolerance": 20},
+      "torso": {"joint": ["shoulder", "hip", "knee"], "target": 70, "tolerance": 15}
+    },
+    "instructions": [
+      "Feet hip-width apart",
+      "Bend knees as if sitting in a chair",
+      "Keep weight in heels",
+      "Raise arms overhead"
+    ]
+  },
+  {
+    "id": "triangle_pose",
+    "name": "Triangle Pose (Trikonasana)",
+    "description": "A side stretch that opens the hips and hamstrings.",
+    "keypoints": ["left_shoulder", "right_shoulder", "left_hip", "right_hip", "left_knee", "right_knee"],
+    "angles": {
+      "front_leg": {"joint": ["hip", "knee", "ankle"], "target": 180, "tolerance": 10},
+      "torso_tilt": {"joint": ["shoulder", "hip", "ankle"], "target": 90, "tolerance": 15}
+    },
+    "instructions": [
+      "Step feet wide, front foot forward",
+      "Reach forward then down to shin or floor",
+      "Extend top arm toward ceiling",
+      "Keep both legs straight"
+    ]
+  }
+]
