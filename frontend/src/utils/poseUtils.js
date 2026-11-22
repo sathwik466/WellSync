@@ -1,86 +1,162 @@
+// MoveNet keypoint index → name mapping (17 keypoints)
 const KEYPOINT_NAMES = [
-  'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear',
-  'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow',
-  'left_wrist', 'right_wrist', 'left_hip', 'right_hip',
-  'left_knee', 'right_knee', 'left_ankle', 'right_ankle',
+  'nose',           // 0
+  'left_eye',       // 1
+  'right_eye',      // 2
+  'left_ear',       // 3
+  'right_ear',      // 4
+  'left_shoulder',  // 5
+  'right_shoulder', // 6
+  'left_elbow',     // 7
+  'right_elbow',    // 8
+  'left_wrist',     // 9
+  'right_wrist',    // 10
+  'left_hip',       // 11
+  'right_hip',      // 12
+  'left_knee',      // 13
+  'right_knee',     // 14
+  'left_ankle',     // 15
+  'right_ankle',    // 16
 ];
 
-export function getKeypointByName(keypoints, name) {
-  const idx = KEYPOINT_NAMES.indexOf(name);
+const SCORE_THRESHOLD = 0.25;
+
+// Get a keypoint by its full MoveNet name e.g. 'left_knee'
+export function getKeypointByName(keypoints, fullName) {
+  const idx = KEYPOINT_NAMES.indexOf(fullName);
   if (idx === -1) return null;
   const kp = keypoints[idx];
-  return kp && kp.score > 0.3 ? kp : null;
+  return kp && kp.score > SCORE_THRESHOLD ? kp : null;
 }
 
+// Count how many keypoints are visible at sufficient confidence
+export function countVisibleKeypoints(keypoints) {
+  return keypoints.filter((kp) => kp && kp.score > SCORE_THRESHOLD).length;
+}
+
+// Calculate angle (degrees) at vertex b, given three points a-b-c
 export function calculateAngle(a, b, c) {
   if (!a || !b || !c) return null;
-
-  const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+  const radians =
+    Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
   let angle = Math.abs((radians * 180) / Math.PI);
   if (angle > 180) angle = 360 - angle;
   return Math.round(angle);
 }
 
+/**
+ * Returns { corrections, anglesChecked, anglesDetected }
+ *
+ * - corrections: array of correction objects
+ * - anglesChecked: total angle rules in the pose config
+ * - anglesDetected: how many angles were actually computable from visible keypoints
+ *
+ * When anglesDetected === 0, the caller should show "body not detected" instead of ✅.
+ */
 export function getCorrections(keypoints, poseConfig) {
   const corrections = [];
+  if (!poseConfig?.angles) return { corrections, anglesChecked: 0, anglesDetected: 0 };
 
-  if (!poseConfig?.angles) return corrections;
+  const entries = Object.entries(poseConfig.angles);
+  let anglesDetected = 0;
 
-  for (const [name, config] of Object.entries(poseConfig.angles)) {
-    const [p1Name, p2Name, p3Name] = config.joint;
-    const kp1 = getKeypointByName(keypoints, `left_${p1Name}`) || getKeypointByName(keypoints, `right_${p1Name}`);
-    const kp2 = getKeypointByName(keypoints, `left_${p2Name}`) || getKeypointByName(keypoints, `right_${p2Name}`);
-    const kp3 = getKeypointByName(keypoints, `left_${p3Name}`) || getKeypointByName(keypoints, `right_${p3Name}`);
+  for (const [angleName, config] of entries) {
+    const [j1, j2, j3] = config.joint; // e.g. ["hip", "knee", "ankle"]
 
-    const angle = calculateAngle(kp1, kp2, kp3);
-    if (angle === null) continue;
+    // If angle name starts with left_ or right_, only check that side
+    const nameHint = angleName.startsWith('left_')
+      ? ['left']
+      : angleName.startsWith('right_')
+      ? ['right']
+      : ['left', 'right'];
 
-    const diff = angle - config.target;
-    if (Math.abs(diff) > config.tolerance) {
+    let bestAngle = null;
+    let bestDiff = 0;
+
+    for (const side of nameHint) {
+      const kp1 = getKeypointByName(keypoints, `${side}_${j1}`);
+      const kp2 = getKeypointByName(keypoints, `${side}_${j2}`);
+      const kp3 = getKeypointByName(keypoints, `${side}_${j3}`);
+
+      const angle = calculateAngle(kp1, kp2, kp3);
+      if (angle === null) continue;
+
+      const diff = angle - config.target;
+      // Keep whichever side deviates more from target
+      if (Math.abs(diff) > Math.abs(bestDiff)) {
+        bestAngle = angle;
+        bestDiff = diff;
+      }
+    }
+
+    if (bestAngle === null) continue; // keypoints not visible for this angle
+    anglesDetected++;
+
+    if (Math.abs(bestDiff) > config.tolerance) {
+      const label = angleName.replace(/_/g, ' ');
+      const direction = bestDiff > 0 ? 'Reduce' : 'Increase';
       corrections.push({
-        joint: name,
-        current: angle,
+        joint: angleName,
+        current: bestAngle,
         target: config.target,
-        message: diff > 0
-          ? `Reduce ${name.replace('_', ' ')} angle by ~${Math.abs(diff)}° (current: ${angle}°, target: ${config.target}°)`
-          : `Increase ${name.replace('_', ' ')} angle by ~${Math.abs(diff)}° (current: ${angle}°, target: ${config.target}°)`,
+        message: `${direction} ${label}: currently ${bestAngle}°, target ${config.target}°`,
       });
     }
   }
 
-  return corrections;
+  return { corrections, anglesChecked: entries.length, anglesDetected };
 }
 
+// Skeleton connections by MoveNet keypoint index pairs
+const CONNECTIONS = [
+  // Torso
+  [5, 6], [5, 11], [6, 12], [11, 12],
+  // Left arm
+  [5, 7], [7, 9],
+  // Right arm
+  [6, 8], [8, 10],
+  // Left leg
+  [11, 13], [13, 15],
+  // Right leg
+  [12, 14], [14, 16],
+];
+
 export function drawSkeleton(ctx, keypoints, width, height, corrections = []) {
-  const correctionJoints = new Set(corrections.map((c) => c.joint));
+  const hasCorrections = corrections.length > 0;
 
-  const connections = [
-    [5, 6], [5, 7], [7, 9], [6, 8], [8, 10],
-    [5, 11], [6, 12], [11, 12],
-    [11, 13], [13, 15], [12, 14], [14, 16],
-  ];
-
-  ctx.lineWidth = 3;
-
-  for (const [i, j] of connections) {
+  // Draw bone connections
+  for (const [i, j] of CONNECTIONS) {
     const kp1 = keypoints[i];
     const kp2 = keypoints[j];
-    if (!kp1 || !kp2 || kp1.score < 0.3 || kp2.score < 0.3) continue;
+    if (!kp1 || !kp2 || kp1.score < SCORE_THRESHOLD || kp2.score < SCORE_THRESHOLD) continue;
 
-    ctx.strokeStyle = '#52b788';
+    ctx.strokeStyle = hasCorrections ? '#f97316' : '#22c55e';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(kp1.x, kp1.y);
     ctx.lineTo(kp2.x, kp2.y);
     ctx.stroke();
   }
 
+  // Draw keypoint circles
   for (let i = 0; i < keypoints.length; i++) {
     const kp = keypoints[i];
-    if (!kp || kp.score < 0.3) continue;
+    if (!kp || kp.score < SCORE_THRESHOLD) continue;
 
+    // Outer glow
     ctx.beginPath();
-    ctx.arc(kp.x, kp.y, 6, 0, 2 * Math.PI);
-    ctx.fillStyle = correctionJoints.size > 0 ? '#f59e0b' : '#2d6a4f';
+    ctx.arc(kp.x, kp.y, 7, 0, 2 * Math.PI);
+    ctx.fillStyle = hasCorrections ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)';
     ctx.fill();
+
+    // Inner dot
+    ctx.beginPath();
+    ctx.arc(kp.x, kp.y, 4, 0, 2 * Math.PI);
+    ctx.fillStyle = hasCorrections ? '#ef4444' : '#16a34a';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
   }
 }
